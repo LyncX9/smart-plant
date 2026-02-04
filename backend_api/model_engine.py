@@ -18,8 +18,9 @@ CLASSES = ["BrownSpot", "Healthy", "Hispa", "LeafBlast"]
 MODEL_PATH = "best_model_fixed.pth" 
 
 # Validation Thresholds
-MIN_CONFIDENCE_THRESHOLD = 0.35
-CONFIDENCE_MEDIUM = 0.40
+# Lowered thresholds to match model performance (~37% accuracy)
+MIN_CONFIDENCE_THRESHOLD = 0.20  # Below this = Unknown Object
+CONFIDENCE_MEDIUM = 0.25  # Threshold for Healthy/Diseased certainty
 
 # Weights
 WEIGHT_CNN = 0.6
