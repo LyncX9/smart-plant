@@ -1,0 +1,83 @@
+{
+  "ranking": [
+    {
+      "rank": 1,
+      "model": "best_model.pth",
+      "type": "mobilenet_original",
+      "avg_confidence_percent": 86.8,
+      "healthy_detected": 6,
+      "total_images": 7,
+      "per_leaf_predictions": [
+        "Healthy",
+        "Healthy",
+        "Healthy",
+        "Healthy",
+        "Healthy",
+        "BrownSpot",
+        "Healthy"
+      ],
+      "per_leaf_confidences": [
+        96.8,
+        99.6,
+        99.9,
+        97.4,
+        53.2,
+        70.2,
+        90.5
+      ]
+    },
+    {
+      "rank": 2,
+      "model": "best_model_v2.pth",
+      "type": "mobilenet_v2_simple",
+      "avg_confidence_percent": 52.8,
+      "healthy_detected": 1,
+      "total_images": 7,
+      "per_leaf_predictions": [
+        "BrownSpot",
+        "BrownSpot",
+        "BrownSpot",
+        "BrownSpot",
+        "BrownSpot",
+        "BrownSpot",
+        "Healthy"
+      ],
+      "per_leaf_confidences": [
+        39.1,
+        46.1,
+        82.1,
+        45.7,
+        42.4,
+        73.9,
+        40.5
+      ]
+    },
+    {
+      "rank": 3,
+      "model": "best_model_fixed.pth",
+      "type": "mobilenet_fixed",
+      "avg_confidence_percent": 32.3,
+      "healthy_detected": 3,
+      "total_images": 7,
+      "per_leaf_predictions": [
+        "LeafBlast",
+        "Healthy",
+        "BrownSpot",
+        "BrownSpot",
+        "LeafBlast",
+        "Healthy",
+        "Healthy"
+      ],
+      "per_leaf_confidences": [
+        31.7,
+        34.9,
+        35.8,
+        28.6,
+        30.1,
+        33.4,
+        31.4
+      ]
+    }
+  ],
+  "best_model": "best_model.pth"
+}
