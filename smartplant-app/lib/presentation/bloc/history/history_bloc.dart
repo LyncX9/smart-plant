@@ -201,7 +201,18 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
         filter: filter,
       ));
     } catch (e) {
-      emit(HistoryError(e.toString()));
+      // Handle 404 or network errors gracefully - show empty state instead of error
+      // This happens when backend doesn't have /history endpoint (cloud deployment)
+      if (e.toString().contains('404') || e.toString().contains('Server error')) {
+        emit(const HistoryLoaded(
+          scans: [],
+          hasMore: false,
+          currentPage: 1,
+          filter: HistoryFilter(),
+        ));
+      } else {
+        emit(HistoryError(e.toString()));
+      }
     }
   }
   

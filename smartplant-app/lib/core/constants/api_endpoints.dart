@@ -5,8 +5,8 @@ class ApiEndpoints {
   /// Base URL for the SmartPlant API
   /// Change this to your production URL
   // static const String baseUrl = 'http://10.0.2.2:8000/api';  // Android emulator
-  static const String baseUrl = 'http://192.168.1.3:8000/api';  // Local Wi-Fi (Your Laptop IP)
-  // static const String baseUrl = 'https://your-domain.com/api';  // Production
+  // static const String baseUrl = 'http://192.168.1.3:8000/api';  // Local Wi-Fi
+  static const String baseUrl = 'https://smart-plant.onrender.com';  // Production (Render)
   
   /// Endpoints
   static const String analyze = '/analyze';

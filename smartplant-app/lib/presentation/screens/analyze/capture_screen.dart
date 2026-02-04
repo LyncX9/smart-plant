@@ -30,13 +30,38 @@ class _CaptureScreenContent extends StatefulWidget {
   State<_CaptureScreenContent> createState() => _CaptureScreenContentState();
 }
 
-class _CaptureScreenContentState extends State<_CaptureScreenContent> {
+class _CaptureScreenContentState extends State<_CaptureScreenContent>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final ImagePicker _picker = ImagePicker();
 
-  Future<void> _pickImage(ImageSource source) async {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app resume after camera to prevent state loss
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() {}); // Refresh UI
+    }
+  }
+
+  /// Pick single image from camera
+  Future<void> _pickImageFromCamera() async {
     try {
       final XFile? image = await _picker.pickImage(
-        source: source,
+        source: ImageSource.camera,
         imageQuality: 85,
         maxWidth: 1920,
         maxHeight: 1920,
@@ -48,7 +73,41 @@ class _CaptureScreenContentState extends State<_CaptureScreenContent> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to pick image: $e')),
+          SnackBar(content: Text('Failed to capture image: $e')),
+        );
+      }
+    }
+  }
+
+  /// Pick multiple images from gallery (up to remaining slots, max 7 total)
+  Future<void> _pickMultipleImagesFromGallery() async {
+    try {
+      final currentCount = context.read<AnalyzeBloc>().state.imageCount;
+      final remainingSlots = 7 - currentCount;
+      
+      if (remainingSlots <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Maximum 7 images allowed')),
+        );
+        return;
+      }
+      
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 85,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        limit: remainingSlots,
+      );
+      
+      if (images.isNotEmpty && mounted) {
+        for (final img in images) {
+          context.read<AnalyzeBloc>().add(AddImage(File(img.path)));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to pick images: $e')),
         );
       }
     }
@@ -89,7 +148,7 @@ class _CaptureScreenContentState extends State<_CaptureScreenContent> {
                     label: 'Camera',
                     onTap: () {
                       Navigator.pop(context);
-                      _pickImage(ImageSource.camera);
+                      _pickImageFromCamera();
                     },
                   ),
                 ),
@@ -98,9 +157,10 @@ class _CaptureScreenContentState extends State<_CaptureScreenContent> {
                   child: _buildSourceOption(
                     icon: Icons.photo_library,
                     label: 'Gallery',
+                    subtitle: 'Select multiple',
                     onTap: () {
                       Navigator.pop(context);
-                      _pickImage(ImageSource.gallery);
+                      _pickMultipleImagesFromGallery();
                     },
                   ),
                 ),
@@ -116,6 +176,7 @@ class _CaptureScreenContentState extends State<_CaptureScreenContent> {
   Widget _buildSourceOption({
     required IconData icon,
     required String label,
+    String? subtitle,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
@@ -131,23 +192,82 @@ class _CaptureScreenContentState extends State<_CaptureScreenContent> {
             Icon(icon, size: 32, color: AppColors.primaryGreen),
             const SizedBox(height: 8),
             Text(label, style: Theme.of(context).textTheme.titleMedium),
+            if (subtitle != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
+  /// Show dialog when rice leaf not detected (Unknown Object)
+  void _showInvalidImageDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Expanded(child: Text('Rice Leaf Not Detected')),
+          ],
+        ),
+        content: const Text(
+          'Gambar tidak terdeteksi sebagai daun padi (Rice Leaf).\n\n'
+          'Sistem saat ini hanya dioptimalkan untuk menganalisis daun padi. '
+          'Mohon pastikan Anda mengambil foto daun padi yang jelas dan fokus.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx); // Close dialog
+              context.read<AnalyzeBloc>().add(ClearImages());
+            },
+            child: const Text('OK'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx); // Close dialog
+              context.read<AnalyzeBloc>().add(ClearImages());
+              Future.delayed(const Duration(milliseconds: 100), () {
+                if (mounted) _showImageSourceDialog();
+              });
+            },
+            child: const Text('Add Images'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     return BlocConsumer<AnalyzeBloc, AnalyzeState>(
       listener: (context, state) {
         if (state is AnalyzeSuccess) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ResultScreen(scan: state.result),
-            ),
-          );
+          // Check for Unknown Object BEFORE navigating to ResultScreen
+          final condition = state.result.summary.condition;
+          if (condition == "Unknown Object" || condition == "Unknown") {
+            _showInvalidImageDialog();
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ResultScreen(scan: state.result),
+              ),
+            );
+          }
         } else if (state is AnalyzeError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
