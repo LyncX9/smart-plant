@@ -697,9 +697,10 @@ class _ResultScreenState extends State<ResultScreen> {
               flex: 2,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.pushReplacement(
+                  Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    MaterialPageRoute(builder: (_) => const MainScreen()),
+                    (route) => false,
                   );
                   Future.delayed(const Duration(milliseconds: 100), () {
                     if (context.mounted) {
