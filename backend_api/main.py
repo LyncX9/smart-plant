@@ -78,6 +78,22 @@ async def analyze_image(
             overlay_b64 = raw_result.get("overlay_base64")
             overlay_url = f"data:image/jpeg;base64,{overlay_b64}" if overlay_b64 else None
             
+            # Encode original image as base64 for preview
+            import base64
+            original_b64 = base64.b64encode(contents).decode('utf-8')
+            original_url = f"data:image/jpeg;base64,{original_b64}"
+            
+            # Compute vein status from vein metrics
+            vein_continuity = vein.get("vein_continuity", 0.0)
+            if vein_continuity > 0.7:
+                vein_status = "Good"
+            elif vein_continuity > 0.4:
+                vein_status = "Moderate"
+            elif vein_continuity > 0.1:
+                vein_status = "Weak"
+            else:
+                vein_status = "Unknown"
+            
             formatted_leaf = {
                 "leaf_index": idx + 1,
                 "filename": file.filename or f"leaf_{idx+1}.jpg",
@@ -86,10 +102,13 @@ async def analyze_image(
                 "probabilities": classification.get("class_probabilities", {}),
                 "lesion_count": summary.get("total_lesion_count", 0),
                 "lesion_area_percent": summary.get("avg_lesion_area_percent", 0.0),
-                "vein_length_px": vein.get("vein_length_px", 0),
-                "vein_density_percent": vein.get("vein_density_percent", 0.0),
-                "vein_continuity": vein.get("vein_continuity", 0.0),
-                "original_url": None,
+                "vein_status": vein_status,
+                "vein_metrics": {
+                    "length_px": vein.get("vein_length_px", 0),
+                    "density_percent": vein.get("vein_density_percent", 0.0),
+                    "continuity": vein_continuity
+                },
+                "original_url": original_url,
                 "overlay_url": overlay_url
             }
             leaf_results.append(formatted_leaf)

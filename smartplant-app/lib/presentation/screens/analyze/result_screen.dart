@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,7 +7,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/colors.dart';
 import '../../../domain/entities/scan.dart';
 import '../../../domain/entities/leaf_result.dart';
-import '../home_screen.dart';
+import '../main_screen.dart';
 
 class ResultScreen extends StatefulWidget {
   final Scan scan;
@@ -49,7 +51,7 @@ class _ResultScreenState extends State<ResultScreen> {
           TextButton(
             onPressed: () => Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              MaterialPageRoute(builder: (_) => const MainScreen()),
               (route) => false,
             ),
             child: const Text('Back to Home'),
@@ -71,7 +73,7 @@ class _ResultScreenState extends State<ResultScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (_) => const HomeScreen()),
+            MaterialPageRoute(builder: (_) => const MainScreen()),
             (route) => false,
           ),
         ),
@@ -542,6 +544,24 @@ class _ResultScreenState extends State<ResultScreen> {
     return GestureDetector(
       onTap: () {
         // Could implement full-screen image view here
+        showDialog(
+          context: context,
+          builder: (ctx) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(16),
+            child: InteractiveViewer(
+              child: url.startsWith('data:image')
+                  ? Image.memory(
+                      base64Decode(url.split(',')[1]),
+                      fit: BoxFit.contain,
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.contain,
+                    ),
+            ),
+          ),
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -556,25 +576,40 @@ class _ResultScreenState extends State<ResultScreen> {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: url,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (_, __) => Container(
-                  color: AppColors.background,
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  color: AppColors.background,
-                  child: const Icon(Icons.image_not_supported, color: AppColors.textSecondary),
-                ),
-              ),
+              child: url.startsWith('data:image')
+                  ? Image.memory(
+                      base64Decode(url.split(',')[1]),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (_, __, ___) => _buildErrorImage(),
+                    )
+                  : CachedNetworkImage(
+                      imageUrl: url,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      placeholder: (_, __) => _buildLoadingImage(),
+                      errorWidget: (_, __, ___) => _buildErrorImage(),
+                    ),
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLoadingImage() {
+    return Container(
+      color: AppColors.background,
+      child: const Center(
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+
+  Widget _buildErrorImage() {
+    return Container(
+      color: AppColors.background,
+      child: const Icon(Icons.image_not_supported, color: AppColors.textSecondary),
     );
   }
 
@@ -647,7 +682,7 @@ class _ResultScreenState extends State<ResultScreen> {
               child: OutlinedButton.icon(
                 onPressed: () => Navigator.pushAndRemoveUntil(
                   context,
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  MaterialPageRoute(builder: (_) => const MainScreen()),
                   (route) => false,
                 ),
                 icon: const Icon(Icons.home),
